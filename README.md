@@ -1,68 +1,45 @@
-# 一些关于iptables转发的工具
+# 利用iptables设置端口转发的shell脚本
 
-socat、haproxy好像是最方便的端口转发工具，但是我喜欢iptables，写了几个脚本，适用于以下需求
+**本项目支持转发到ddns域名、支持udp转发，但不支持端口段转发**
 
-- iptables.sh:中转的目标地址可以使用。原来的iptables不支持域名，这个脚本增加域名支持，但不支持ddns域名。适用于所有linux发行版
-- setCroniptablesDDNS.sh: 适用于中转目标地址为ddns域名。这个脚本会设置crontab定时任务，每分钟执行一次，检测ddns的ip是否改变，如改变则更新端口映射。适用于centos7
-- setCroniptablesDDNS-debian.sh 对上面的脚本做修改，适用于debian系  来自[Catboy96](https://github.com/Catboy96)
-- rmPreNatRule.sh: 删除本机上对应端口的中转规则，会同时删除PREROUTING和POSTROUTING链的相关规则。
+> 用这几个脚本不收费，所以请大家不要觉得我有义务解答脚本使用的问题。有问题请提issue，请不要通过其他途径联系我，下班时间不想被这些事情烦到。
 
-# 用法
+> 老板们，本项目还是在不断开发的，推荐有兴趣的人点star而不是fork，因为fork出的项目是收不到更新的——一个建议而已
 
-# iptables.sh
+很多玩VPS的人都会有设置端口转发、进行中转的需求，在这方面也有若干种方案，比如socat、haproxy、brook等等。他们都有一些局限或者问题，比如socat会爆内存，haproxy不支持udp转发。
+
+我比较喜欢iptables。iptables利用linux的一个内核模块进行ip包的转发，工作在linux的内核态，不涉及内核态和用户态的状态转换，因此可以说是所有端口转发方案中性能最好、最稳定的。但他的缺点也显而易见：只支持IP、需要输入一大堆参数。本项目就是为了解决这些缺点，让大家能方便快速地使用最快、最稳定的端口转发方案。
+
+
+## 用法
 
 ```shell
-rm -f iptables.sh;
-wget  https://raw.githubusercontent.com/arloor/iptablesUtils/master/iptables.sh;
-bash iptables.sh;
+wget -qO natcfg.sh http://arloor.com/sh/iptablesUtils/natcfg.sh && bash natcfg.sh
+```
+
+或
+
+```
+wget -qO natcfg.sh https://raw.githubusercontent.com/arloor/iptablesUtils/master/natcfg.sh && bash natcfg.sh
 ```
 
 输出如下：
-```shell
-本脚本用途：
-设置本机tcp和udp端口转发
-原始iptables仅支持ip地址，该脚本增加域名支持（要求域名指向的主机ip不变）
-若要支持ddns，请使用 https://raw.githubusercontent.com/arloor/iptablesUtils/master/setCroniptablesDDNS.sh;
-
-local port:8388
-remote port:1234
-target domain/ip:xxx.com
-target-ip: xx.xx.xx.xx
-local-ip: xx.xx.xx.xx
-done!
-```
-
-# setCroniptablesDDNS.sh
-
-适用于centos系
-
-```shell
-rm -f setCroniptablesDDNS.sh
-wget https://raw.githubusercontent.com/arloor/iptablesUtils/master/setCroniptablesDDNS.sh;
-bash setCroniptablesDDNS.sh
-
-
-#local port:80
-#remote port:58000
-#targetDDNS:xxxx.example.com
-#done!
-#现在每分钟都会检查ddns的ip是否改变，并自动更新
-```
-
-# setCroniptablesDDNS-debian.sh
-
-适用于debain系
 
 ```
-rm -f setCroniptablesDDNS-debian.sh
-wget https://raw.githubusercontent.com/arloor/iptablesUtils/master/setCroniptablesDDNS-debian.sh;
-bash setCroniptablesDDNS-debian.sh
+用途: 便捷的设置iptables端口转发
+注意1: 到域名的转发规则在添加后需要等待2分钟才会生效，且在机器重启后仍然有效
+注意2: 到IP的转发规则在重启后会失效，这是iptables的特性
+
+你要做什么呢（请输入数字）？Ctrl+C 退出本脚本
+1) 增加到域名的转发      3) 增加到IP的转发        5) 列出所有到域名的转发
+2) 删除到域名的转发      4) 删除到IP的转发        6) 查看iptables转发规则
+#? 
 ```
 
-# rmPreNatRule.sh
+此时按照需要，输入1-6中的任意数字，然后按照提示即可
 
-```shell
-rm -f rmPreNatRule.sh
-wget https://raw.githubusercontent.com/arloor/iptablesUtils/master/rmPreNatRule.sh;
-bash rmPreNatRule.sh $localport
-```
+## 致谢
+
+在中秋节收到了平生第一次捐赠，感谢给我捐赠得老板（们）。
+
+表达认可和鼓励只要个位数就行啦，大几十的就千万就不要了！大家钱来得都不容易🙏

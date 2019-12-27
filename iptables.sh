@@ -6,10 +6,10 @@ red="\033[31m"
 black="\033[0m"
 
 if [ $USER = "root" ];then
-	echo "本脚本用途："
+    echo "本脚本用途："
     echo "设置本机tcp和udp端口转发"
-    echo  "原始iptables仅支持ip地址，该脚本增加域名支持（要求域名指向的主机ip不变），如果是centos系统请先执行：yum install bind-utils"
-    echo "若要支持ddns，请使用 https://raw.githubusercontent.com/arloor/iptablesUtils/master/iptables4ddns.sh;"
+    echo  "原始iptables仅支持ip地址，该脚本增加域名支持（要求域名指向的主机ip不变）"
+    echo -e "若要支持ddns，请使用 ${red}dnat-install.sh${black}"
     echo
 else
     echo   -e "${red}请使用root用户执行本脚本!! ${black}"
@@ -32,11 +32,22 @@ if [  "$remotehost"  =  "" ];then
     echo -n "target domain/ip:" ;read remotehost
 fi
 
+# 判断端口是否为数字
+echo "$localport"|[ -n "`sed -n '/^[0-9][0-9]*$/p'`" ] && echo $remoteport |[ -n "`sed -n '/^[0-9][0-9]*$/p'`" ]&& valid=true
+if [ "$valid" = "" ];then
+   echo  -e "${red}本地端口和目标端口请输入数字！！${black}"
+   exit 1;
+fi
+
 if [ "$(echo  $remotehost |grep -E -o '([0-9]{1,3}[\.]){3}[0-9]{1,3}')" != "" ];then
     isip=true
     remote=$remotehost
 else
-    remote=$(host -t a  $remotehost|grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
+    echo "正在安装host命令....."
+    yum install -y wget bind-utils &> /dev/null  #为centos系列安装依赖
+    apt install -y wget dnsutils  &> /dev/null   #为debain系列安装依赖
+    echo "Done"
+    remote=$(host -t a  $remotehost|grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}"|head -1)
 fi
 if [ "$remote" = "" ];then
     echo -e "${red}无法解析remotehost，请填写正确的remotehost！${black}"
@@ -95,3 +106,9 @@ iptables -t nat -A PREROUTING -p udp --dport $localport -j DNAT --to-destination
 iptables -t nat -A POSTROUTING -p tcp -d $remote --dport $remoteport -j SNAT --to-source $local
 iptables -t nat -A POSTROUTING -p udp -d $remote --dport $remoteport -j SNAT --to-source $local
 echo 端口转发成功
+echo "###########################################################"
+echo  -e "当前NAT表如下：(仅供专业人士debug用)"
+iptables -L PREROUTING -n -t nat
+iptables -L POSTROUTING -n -t nat
+echo "###########################################################"
+
